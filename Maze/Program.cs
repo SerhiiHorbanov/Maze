@@ -32,13 +32,14 @@ namespace Maze
 
     internal class Program
     {
-        static Map currentMap = new Map();
+        static Map currentMap = new Map(new TileType[,] { { TileType.Wall, TileType.Floor, TileType.Finish },
+                                                          { TileType.Spike, TileType.Coin, TileType.Key } }, 0, 0);
         const string title = "Maze";
         static ConsoleKey inputKey;
         static bool isOnExit = false;
         static string[] titleAnimationFrames = { "M", "MA", "MAZ", "MAZE", "MAZEEEEE", "MAZE" };
         static int timeBetweenFrames = 100;
-        static GameState gameState = GameState.MainMenu;
+        static GameState gameState = GameState.InGame;
         static void Main(string[] args)
         {
             Start();
@@ -96,7 +97,35 @@ namespace Maze
 
         static void Render()
         {
+            StringBuilder stringBuilder = new StringBuilder();
+            string stringToWrite;
+            for (int y = 0; y < currentMap.tiles.GetLength(0); y++)
+            {
+                for (int x = 0; x < currentMap.tiles.GetLength(1); x++)
+                {
+                    char charToAdd = currentMap.tiles[y, x] switch
+                    {
+                        TileType.Wall => '#',
+                        TileType.Floor => ' ',
+                        TileType.Finish => 'F',
+                        TileType.Spike => '^',
+                        TileType.Coin => 'c',
+                        TileType.Key => 'k',
+                        TileType.LockedDoor => 'Д',
+                        TileType.OpenedDoor => 'П',
+                    };
+                    stringBuilder.Append(charToAdd);
+                }
+                stringBuilder.Append('\n');
+            }
+
             
+            stringBuilder.Remove(currentMap.playerY * (currentMap.lengthY + 2) + currentMap.playerX, 1);
+            stringBuilder.Insert(currentMap.playerY * (currentMap.lengthY + 2) + currentMap.playerX, '@');
+            stringToWrite = stringBuilder.ToString();
+            Console.Clear();
+            Console.WriteLine(stringToWrite);
+            Console.WriteLine(currentMap.playerCoins);
         }
 
         static void SetupConsole()
@@ -121,16 +150,21 @@ namespace Maze
 
     struct Map
     {
-        TileType[,] tiles;
-        int playerX;
-        int playerY;
-        int playerCoins = 0;
-        bool playerHasKey = false;
+        public TileType[,] tiles;
+        public int lengthY;
+        public int lengthX;
+        public int playerX;
+        public int playerY;
+        public int playerCoins = 0;
+        public bool playerHasKey = false;
+
         public Map(TileType[,] tiles, int spawnX, int spawnY)
         {
             this.tiles = tiles;
             playerX = spawnX;
             playerY = spawnY;
+            lengthY = tiles.GetLength(0);
+            lengthX = tiles.GetLength(1);
         }
 
         public void playerGo(Direction direction)
@@ -139,24 +173,29 @@ namespace Maze
             short dy = 0;
             TileType wherePlayerWantToGo;
             bool playerCanGoThere;
+
             switch (direction)
             {
                 case Direction.Up:
-                    dy = 1;
+                    if (playerY != 0)
+                        dy = -1;
                     break;
                 case Direction.Down:
-                    dy = -1;
+                    if (playerY != lengthY - 1)
+                        dy = 1;
                     break;
                 case Direction.Left:
-                    dx = -1;
+                    if (playerX != 0)
+                        dx = -1;
                     break;
                 case Direction.Right:
-                    dx = 1;
+                    if (playerX != lengthX - 1)
+                        dx = 1;
                     break;
             }
 
-            wherePlayerWantToGo = tiles[playerX + dx, playerY + dy];
-            playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
+            wherePlayerWantToGo = tiles[playerY + dy, playerX + dx];
+            playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || wherePlayerWantToGo == TileType.OpenedDoor || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
 
             if (playerCanGoThere)
             {
@@ -164,10 +203,16 @@ namespace Maze
                 playerY += dy;
 
                 if (wherePlayerWantToGo == TileType.Coin)
+                {
+                    tiles[playerY, playerX] = TileType.Floor;
                     playerCoins++;
+                }
 
-                if (wherePlayerWantToGo == TileType.Key) 
+                if (wherePlayerWantToGo == TileType.Key)
+                {
+                    tiles[playerY, playerX] = TileType.Floor;
                     playerHasKey = true;
+                }
             }
         }
     }
