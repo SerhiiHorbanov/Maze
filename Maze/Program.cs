@@ -21,16 +21,24 @@ namespace Maze
         InGame,
     }
 
+    enum Direction
+    {
+        Up,
+        Down,
+        Left,
+        Right,
+        None
+    }
+
     internal class Program
     {
+        static Map currentMap = new Map();
         const string title = "Maze";
         static ConsoleKey inputKey;
         static bool isOnExit = false;
         static string[] titleAnimationFrames = { "M", "MA", "MAZ", "MAZE", "MAZEEEEE", "MAZE" };
         static int timeBetweenFrames = 100;
         static GameState gameState = GameState.MainMenu;
-        static int X;
-        static int Y;
         static void Main(string[] args)
         {
             Start();
@@ -75,24 +83,15 @@ namespace Maze
 
         static void inGameUpdate()
         {
-            short dx = 0;
-            short dy = 0;
-            switch (inputKey)
+            Direction walkDirection = inputKey switch
             {
-                case ConsoleKey.W:
-                    dy = 1;
-                    break;
-                case ConsoleKey.S:
-                    dy = -1;
-                    break;
-                case ConsoleKey.A:
-                    dx = -1;
-                    break;
-                case ConsoleKey.D:
-                    dx = 1;
-                    break;
-            }
-            
+                ConsoleKey.W => Direction.Up,
+                ConsoleKey.S => Direction.Down,
+                ConsoleKey.A => Direction.Left,
+                ConsoleKey.D => Direction.Right,
+                _ => Direction.None
+            };
+            currentMap.playerGo(walkDirection);
         }
 
         static void Render()
@@ -118,20 +117,58 @@ namespace Maze
             }
         }
 
-     }
-    struct Tile
-    {
-        TileType type = TileType.Floor;
-        public Tile(TileType type)
-        {
-            this.type = type;
-        }
     }
 
     struct Map
     {
-        Tile[,] tiles;
-        int spawnX;
-        int spawnY;
+        TileType[,] tiles;
+        int playerX;
+        int playerY;
+        int playerCoins = 0;
+        bool playerHasKey = false;
+        public Map(TileType[,] tiles, int spawnX, int spawnY)
+        {
+            this.tiles = tiles;
+            playerX = spawnX;
+            playerY = spawnY;
+        }
+
+        public void playerGo(Direction direction)
+        {
+            short dx = 0;
+            short dy = 0;
+            TileType wherePlayerWantToGo;
+            bool playerCanGoThere;
+            switch (direction)
+            {
+                case Direction.Up:
+                    dy = 1;
+                    break;
+                case Direction.Down:
+                    dy = -1;
+                    break;
+                case Direction.Left:
+                    dx = -1;
+                    break;
+                case Direction.Right:
+                    dx = 1;
+                    break;
+            }
+
+            wherePlayerWantToGo = tiles[playerX + dx, playerY + dy];
+            playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
+
+            if (playerCanGoThere)
+            {
+                playerX += dx;
+                playerY += dy;
+
+                if (wherePlayerWantToGo == TileType.Coin)
+                    playerCoins++;
+
+                if (wherePlayerWantToGo == TileType.Key) 
+                    playerHasKey = true;
+            }
+        }
     }
 }
