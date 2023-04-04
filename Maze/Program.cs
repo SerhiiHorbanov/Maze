@@ -1,17 +1,17 @@
 ﻿using System.Text;
+using System.IO;
 
 namespace Maze
 {
     enum TileType
     {
-        Wall,
-        Floor,
-        Finish,
-        Spike,
-        Coin,
-        Key,
-        LockedDoor,
-        OpenedDoor
+        Wall = '#',
+        Floor = ' ',
+        Finish = 'F',
+        Spike = '^',
+        Coin = 'C',
+        Key = 'K',
+        LockedDoor = 'X'
     }
 
     enum GameState
@@ -32,13 +32,16 @@ namespace Maze
 
     internal class Program
     {
-        static Map currentMap = new Map(new TileType[,] { { TileType.Wall, TileType.Floor, TileType.Finish },
+        static Gameplay game = new Gameplay(new TileType[,] { { TileType.Wall, TileType.Floor, TileType.Finish },
                                                           { TileType.Spike, TileType.Coin, TileType.Key },
                                                           { TileType.LockedDoor, TileType.Floor, TileType.Floor },}, 1, 1);
+
+        public int playerCoins = 0;
+        public bool playerHasKey = false;
         const string title = "Maze";
         static ConsoleKey inputKey;
         static bool isOnExit = false;
-        static string[] titleAnimationFrames = { "M", "MA", "MAZ", "MAZE", "MAZEEEEE", "MAZE" };
+        static string[] titleAnimationFrames = { "M", "MA", "MAZ", "MAZE"};
         static int timeBetweenFrames = 100;
         static GameState gameState = GameState.InGame;
         static void Main(string[] args)
@@ -78,60 +81,35 @@ namespace Maze
             switch (gameState)
             {
                 case GameState.InGame:
-                    inGameUpdate();
+                    game.Update(inputKey);
                     break;
             }
         }
 
-        static void inGameUpdate()
-        {
-            bool playerGoes = inputKey == ConsoleKey.W || inputKey == ConsoleKey.S || inputKey == ConsoleKey.A || inputKey == ConsoleKey.D;
-
-            if (!playerGoes)
-                return;
-
-            Direction walkDirection = inputKey switch
-            {
-                ConsoleKey.W => Direction.Up,
-                ConsoleKey.S => Direction.Down,
-                ConsoleKey.A => Direction.Left,
-                ConsoleKey.D => Direction.Right,
-                _ => Direction.None
-            };
-            currentMap.playerGo(walkDirection);
-        }
 
         static void Render()
         {
             StringBuilder stringBuilder = new StringBuilder();
             string stringToWrite;
-            for (int y = 0; y < currentMap.tiles.GetLength(0); y++)
+            for (int y = 0; y < game.tiles.GetLength(0); y++)
             {
-                for (int x = 0; x < currentMap.tiles.GetLength(1); x++)
+                for (int x = 0; x < game.tiles.GetLength(1); x++)
                 {
-                    char charToAdd = currentMap.tiles[y, x] switch
-                    {
-                        TileType.Wall => '#',
-                        TileType.Floor => '.',
-                        TileType.Finish => 'F',
-                        TileType.Spike => '^',
-                        TileType.Coin => 'c',
-                        TileType.Key => 'k',
-                        TileType.LockedDoor => 'H',
-                        TileType.OpenedDoor => 'N',
-                    };
+                    char charToAdd = (char)game.tiles[y, x];
                     stringBuilder.Append(charToAdd);
                 }
                 stringBuilder.Append('\n');
             }
 
             
-            stringBuilder.Remove(currentMap.playerY * (currentMap.lengthY + 1) + currentMap.playerX, 1);
-            stringBuilder.Insert(currentMap.playerY * (currentMap.lengthY + 1) + currentMap.playerX, '@');
+            stringBuilder.Remove(game.playerY * (game.lengthY + 1) + game.playerX, 1);
+            stringBuilder.Insert(game.playerY * (game.lengthY + 1) + game.playerX, '@');
+            stringBuilder.Append($"you have {game.playerCoins} coin");
+            stringBuilder.Append(game.playerCoins != 1? "s\n" : "\n");//вибачте але чомусь не можна зробити stringBuilder.Append($"you have {game.playerCoins} coin{game.playerCoins != 1? "s" : ""}\n");
+
             stringToWrite = stringBuilder.ToString();
             Console.Clear();
             Console.WriteLine(stringToWrite);
-            Console.WriteLine(currentMap.playerCoins);
         }
 
         static void SetupConsole()
@@ -152,28 +130,34 @@ namespace Maze
             }
         }
 
+        static void ReadMapFromFile()
+        {
+
+        }
     }
 
-    struct Map
+    struct Gameplay
     {
         public TileType[,] tiles;
-        public int lengthX;
-        public int lengthY;
+        public int lengthX { get; private set; }
+        public int lengthY { get; private set; }
         public int playerX;
         public int playerY;
-        public int playerCoins = 0;
-        public bool playerHasKey = false;
+        public int playerCoins;
+        public bool playerHasKey;
 
-        public Map(TileType[,] tiles, int spawnX, int spawnY)
+        public Gameplay(TileType[,] tiles, int spawnX = 0, int spawnY = 0, int playerCoins = 0, bool playerHasKey = false)
         {
             this.tiles = tiles;
             playerX = spawnX;
             playerY = spawnY;
             lengthY = tiles.GetLength(0);
             lengthX = tiles.GetLength(1);
+            this.playerCoins = playerCoins;
+            this.playerHasKey = playerHasKey;
         }
 
-        public void playerGo(Direction direction)
+        private void playerGo(Direction direction)
         {
             short dx = 0;
             short dy = 0;
@@ -204,10 +188,10 @@ namespace Maze
 
             if (wherePlayerWantToGo == TileType.LockedDoor && playerHasKey)
             {
-                tiles[playerY + dy, playerX + dx] = TileType.OpenedDoor;
+                tiles[playerY + dy, playerX + dx] = TileType.Floor;
             }
 
-            playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || wherePlayerWantToGo == TileType.OpenedDoor || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
+            playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
 
             if (playerCanGoThere)
             {
@@ -226,6 +210,20 @@ namespace Maze
                     playerHasKey = true;
                 }
             }
+        }
+
+        public void Update(ConsoleKey inputKey)
+        {
+            Direction walkDirection = inputKey switch
+            {
+                ConsoleKey.W => Direction.Up,
+                ConsoleKey.S => Direction.Down,
+                ConsoleKey.A => Direction.Left,
+                ConsoleKey.D => Direction.Right,
+                _ => Direction.None
+            };
+            if (walkDirection != Direction.None)
+            playerGo(walkDirection);
         }
     }
 }
