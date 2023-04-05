@@ -25,38 +25,43 @@ namespace Maze
 
     internal class Program
     {
+        static void Main(string[] args)
+        {
+            Maze maze = new Maze();
+            maze.Start();
+            Console.ReadKey();
+        }
+    }
+
+    class Maze
+    {
         #region variables
-        private static TileType[,] tiles = new TileType[,]
+        private TileType[,] tiles = new TileType[,]
         { { TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Key },
           { TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Wall, TileType.Wall },
           { TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Coin, TileType.Floor },
-          { TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Wall, TileType.LockedDoor },
+          { TileType.Floor, TileType.Spike, TileType.Floor, TileType.Floor, TileType.Wall, TileType.LockedDoor },
           { TileType.Floor, TileType.Floor, TileType.Coin, TileType.Floor, TileType.Wall, TileType.Finish },};
-        private static int lengthX = tiles.GetLength(1);
-        private static int lengthY = tiles.GetLength(0);
-        private static int playerX = 0;
-        private static int playerY = 0;
-        private static int playerCoins;
-        private static bool playerHasKey = false;
-        private static bool win = false;
-        private static bool lose = false;
-        private static bool endedPlaying = false;
-        private static bool showGuide = true;
-        private static ConsoleKey inputKey = ConsoleKey.NoName;
+        private int playerX = 0;
+        private int playerY = 0;
+        private int playerCoins;
+        private bool playerHasKey = false;
+        private bool win = false;
+        private bool lose = false;
+        private bool endedPlaying = false;
+        private bool showGuide = true;
+        private ConsoleKey inputKey = ConsoleKey.NoName;
         #endregion
 
         #region constants and readonlys
-        private static readonly string[] titleAnimationFrames = { "", "M", "MA", "MAZ", "MAZE" };
+        private readonly string[] titleAnimationFrames = { "", "M", "MA", "MAZ", "MAZE" };
         private const int timeBetweenFrames = 200;
         #endregion
 
-        static void Main(string[] args)
+        public void Start()
         {
-            Start();
-            Console.ReadKey();
-        }
-        static void Start()
-        {
+
+
             SetupConsole();
             TitleAnimation();
             while (!endedPlaying)
@@ -74,12 +79,12 @@ namespace Maze
             Console.WriteLine("press any button to close the game");
         }
 
-        static void Input()
+        private void Input()
         {
             inputKey = Console.ReadKey(true).Key;
         }
 
-        static void Update()
+        private void Update()
         {
             Direction walkDirection = inputKey switch
             {
@@ -98,13 +103,13 @@ namespace Maze
 
             if (inputKey == ConsoleKey.H)
                 Console.Clear();
-                showGuide = !showGuide;
+            showGuide = !showGuide;
 
             if (inputKey == ConsoleKey.Q)
                 endedPlaying = true;
         }
 
-        static void Render()
+        private void Render()
         {
             StringBuilder stringBuilder = new StringBuilder();
             string stringToWrite;
@@ -118,8 +123,8 @@ namespace Maze
                 stringBuilder.Append('\n');
             }
 
-            stringBuilder.Remove(playerY * (lengthY + 2) + playerX, 1);
-            stringBuilder.Insert(playerY * (lengthY + 2) + playerX, '@');
+            stringBuilder.Remove(playerY * (tiles.GetLength(0) + 2) + playerX, 1);
+            stringBuilder.Insert(playerY * (tiles.GetLength(0) + 2) + playerX, '@');
 
             stringBuilder.Append($"you have {playerCoins} coin");
             if (playerCoins != 1)
@@ -133,7 +138,7 @@ namespace Maze
                 stringBuilder.Append($"\n            ");
 
             stringBuilder.Append("\n");//вибачте але чомусь не можна зробити stringBuilder.Append($"you have {game.playerCoins} coin{game.playerCoins != 1? "s" : ""}\n");
-            
+
             if (showGuide)
                 stringBuilder.Append($"\"@\" is you.\n\"#\" is wall. you can't walk on walls ):\n\" \" is floor. you can walk on floor (:\n\"F\" is finish. when you on \"F\" it you win\n\"^\" is spike. when you step on it you lose\n\"C\" is coin collecting coins give you nothing but i guess it's cool\n\"K\" is key. you can have only 1 key\n\"D\" is door. you need key to open it. when you open it, it disappears\npress H to hide this text and guide text");
 
@@ -143,13 +148,13 @@ namespace Maze
             Console.WriteLine(stringToWrite);
         }
 
-        static void SetupConsole()
+        private void SetupConsole()
         {
             Console.CursorVisible = false;
             Console.Title = "Maze";
         }
 
-        static void TitleAnimation()
+        private void TitleAnimation()
         {
             foreach (string frame in titleAnimationFrames)
             {
@@ -159,7 +164,7 @@ namespace Maze
             }
         }
 
-        private static void playerGo(Direction direction)
+        private void playerGo(Direction direction)
         {
             short dx = 0;
             short dy = 0;
@@ -173,7 +178,7 @@ namespace Maze
                         dy = -1;
                     break;
                 case Direction.Down:
-                    if (playerY != lengthY - 1)
+                    if (playerY != tiles.GetLength(0) - 1)
                         dy = 1;
                     break;
                 case Direction.Left:
@@ -181,7 +186,7 @@ namespace Maze
                         dx = -1;
                     break;
                 case Direction.Right:
-                    if (playerX != lengthX - 1)
+                    if (playerX != tiles.GetLength(1) - 1)
                         dx = 1;
                     break;
             }
@@ -195,6 +200,7 @@ namespace Maze
                     endedPlaying = true;
                     return;
                 case TileType.Spike:
+                    lose = true;
                     endedPlaying = true;
                     return;
             }
