@@ -11,14 +11,7 @@ namespace Maze
         Spike = '^',
         Coin = 'C',
         Key = 'K',
-        LockedDoor = 'X'
-    }
-
-    enum GameState
-    {
-        MainMenu,
-        Settings,
-        InGame,
+        LockedDoor = 'D'
     }
 
     enum Direction
@@ -32,82 +25,113 @@ namespace Maze
 
     internal class Program
     {
-        static Gameplay game = new Gameplay(new TileType[,] { { TileType.Wall, TileType.Floor, TileType.Finish },
-                                                          { TileType.Spike, TileType.Coin, TileType.Key },
-                                                          { TileType.LockedDoor, TileType.Floor, TileType.Floor },}, 1, 1);
+        #region variables
+        private static TileType[,] tiles = new TileType[,]
+        { { TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Key },
+          { TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Wall, TileType.Wall },
+          { TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Coin, TileType.Floor },
+          { TileType.Floor, TileType.Floor, TileType.Floor, TileType.Floor, TileType.Wall, TileType.LockedDoor },
+          { TileType.Floor, TileType.Floor, TileType.Coin, TileType.Floor, TileType.Wall, TileType.Finish },};
+        private static int lengthX = tiles.GetLength(1);
+        private static int lengthY = tiles.GetLength(0);
+        private static int playerX = 0;
+        private static int playerY = 0;
+        private static int playerCoins;
+        private static bool playerHasKey = false;
+        private static bool win = false;
+        private static bool lose = false;
+        private static bool endedPlaying = false;
+        private static bool showGuide;
+        private static ConsoleKey inputKey = ConsoleKey.NoName;
+        #endregion
 
-        public int playerCoins = 0;
-        public bool playerHasKey = false;
-        const string title = "Maze";
-        static ConsoleKey inputKey;
-        static bool isOnExit = false;
-        static string[] titleAnimationFrames = { "M", "MA", "MAZ", "MAZE"};
-        static int timeBetweenFrames = 100;
-        static GameState gameState = GameState.InGame;
+        #region constants and readonlys
+        private static readonly string[] titleAnimationFrames = { "", "M", "MA", "MAZ", "MAZE" };
+        private const int timeBetweenFrames = 200;
+        #endregion
+
         static void Main(string[] args)
         {
             Start();
+            Console.ReadKey();
         }
         static void Start()
         {
             SetupConsole();
             TitleAnimation();
-            while (!isOnExit)
+            while (!endedPlaying)
             {
-                Timing();
+                Render();
                 Input();
                 Update();
-                Render();
             }
-        }
 
-        static void Timing()
-        {
-            System.Threading.Thread.Sleep(timeBetweenFrames);
+            if (win)
+                Console.WriteLine("you won!");
+            else if (lose)
+                Console.WriteLine("you lost...");
+
+            Console.WriteLine("press any button to close the game");
         }
 
         static void Input()
         {
-            inputKey = ConsoleKey.NoName;
-
-            if (Console.KeyAvailable)
-            {
-                inputKey = Console.ReadKey(true).Key;
-            }
+            inputKey = Console.ReadKey(true).Key;
         }
 
         static void Update()
         {
-            switch (gameState)
+            Direction walkDirection = inputKey switch
             {
-                case GameState.InGame:
-                    game.Update(inputKey);
-                    break;
-            }
-        }
+                ConsoleKey.W => Direction.Up,
+                ConsoleKey.S => Direction.Down,
+                ConsoleKey.A => Direction.Left,
+                ConsoleKey.D => Direction.Right,
+                _ => Direction.None
+            };
 
+            if (walkDirection != Direction.None)
+            {
+                playerGo(walkDirection);
+                return;
+            }
+
+            if (inputKey == ConsoleKey.H)
+                showGuide = !showGuide;
+
+            if (inputKey == ConsoleKey.Q)
+                endedPlaying = true;
+        }
 
         static void Render()
         {
             StringBuilder stringBuilder = new StringBuilder();
             string stringToWrite;
-            for (int y = 0; y < game.tiles.GetLength(0); y++)
+            for (int y = 0; y < tiles.GetLength(0); y++)
             {
-                for (int x = 0; x < game.tiles.GetLength(1); x++)
+                for (int x = 0; x < tiles.GetLength(1); x++)
                 {
-                    char charToAdd = (char)game.tiles[y, x];
+                    char charToAdd = (char)tiles[y, x];
                     stringBuilder.Append(charToAdd);
                 }
                 stringBuilder.Append('\n');
             }
 
+            stringBuilder.Remove(playerY * (lengthY + 2) + playerX, 1);
+            stringBuilder.Insert(playerY * (lengthY + 2) + playerX, '@');
+            stringBuilder.Append($"you have {playerCoins} coin");
+            if (playerCoins != 1)
+                stringBuilder.Append("s");
+            stringBuilder.Append("\n");//вибачте але чомусь не можна зробити stringBuilder.Append($"you have {game.playerCoins} coin{game.playerCoins != 1? "s" : ""}\n");
             
-            stringBuilder.Remove(game.playerY * (game.lengthY + 1) + game.playerX, 1);
-            stringBuilder.Insert(game.playerY * (game.lengthY + 1) + game.playerX, '@');
-            stringBuilder.Append($"you have {game.playerCoins} coin");
-            stringBuilder.Append(game.playerCoins != 1? "s\n" : "\n");//вибачте але чомусь не можна зробити stringBuilder.Append($"you have {game.playerCoins} coin{game.playerCoins != 1? "s" : ""}\n");
+            if (showGuide)
+            {
+                stringBuilder.Append($"press G to see guide");
+                stringBuilder.Append($"press H to hide this text and guide text");
+            }
 
             stringToWrite = stringBuilder.ToString();
+
             Console.Clear();
             Console.WriteLine(stringToWrite);
         }
@@ -115,9 +139,7 @@ namespace Maze
         static void SetupConsole()
         {
             Console.CursorVisible = false;
-            Console.Title = title;
-            Console.SetWindowSize(50, 25);
-            Console.SetBufferSize(50, 25);
+            Console.Title = "Maze";
         }
 
         static void TitleAnimation()
@@ -130,34 +152,7 @@ namespace Maze
             }
         }
 
-        static void ReadMapFromFile()
-        {
-
-        }
-    }
-
-    struct Gameplay
-    {
-        public TileType[,] tiles;
-        public int lengthX { get; private set; }
-        public int lengthY { get; private set; }
-        public int playerX;
-        public int playerY;
-        public int playerCoins;
-        public bool playerHasKey;
-
-        public Gameplay(TileType[,] tiles, int spawnX = 0, int spawnY = 0, int playerCoins = 0, bool playerHasKey = false)
-        {
-            this.tiles = tiles;
-            playerX = spawnX;
-            playerY = spawnY;
-            lengthY = tiles.GetLength(0);
-            lengthX = tiles.GetLength(1);
-            this.playerCoins = playerCoins;
-            this.playerHasKey = playerHasKey;
-        }
-
-        private void playerGo(Direction direction)
+        private static void playerGo(Direction direction)
         {
             short dx = 0;
             short dy = 0;
@@ -186,6 +181,17 @@ namespace Maze
 
             wherePlayerWantToGo = tiles[playerY + dy, playerX + dx];
 
+            switch (wherePlayerWantToGo)
+            {
+                case TileType.Finish:
+                    win = true;
+                    endedPlaying = true;
+                    return;
+                case TileType.Spike:
+                    endedPlaying = true;
+                    return;
+            }
+
             if (wherePlayerWantToGo == TileType.LockedDoor && playerHasKey)
             {
                 tiles[playerY + dy, playerX + dx] = TileType.Floor;
@@ -212,18 +218,12 @@ namespace Maze
             }
         }
 
-        public void Update(ConsoleKey inputKey)
+        static void ReadMapFromFile(string fileName)
         {
-            Direction walkDirection = inputKey switch
-            {
-                ConsoleKey.W => Direction.Up,
-                ConsoleKey.S => Direction.Down,
-                ConsoleKey.A => Direction.Left,
-                ConsoleKey.D => Direction.Right,
-                _ => Direction.None
-            };
-            if (walkDirection != Direction.None)
-            playerGo(walkDirection);
+            string strExeFilePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            string strWorkPath = Path.GetDirectoryName(strExeFilePath);
+            string mapFilePath = Path.Combine(strWorkPath, fileName);
+            StreamReader fileReader = new StreamReader(mapFilePath);
         }
     }
 }
