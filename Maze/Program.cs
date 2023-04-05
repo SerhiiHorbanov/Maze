@@ -5,13 +5,13 @@ namespace Maze
 {
     enum TileType
     {
-        Wall = '#',
-        Floor = ' ',
-        Finish = 'F',
-        Spike = '^',
-        Coin = 'C',
-        Key = 'K',
-        LockedDoor = 'D'
+        Wall = 35,
+        Floor = 32,
+        Finish = 102,
+        Spike = 94,
+        Coin = 99,
+        Key = 107,
+        LockedDoor = 100
     }
 
     enum Direction
@@ -41,7 +41,7 @@ namespace Maze
         private static bool win = false;
         private static bool lose = false;
         private static bool endedPlaying = false;
-        private static bool showGuide;
+        private static bool showGuide = true;
         private static ConsoleKey inputKey = ConsoleKey.NoName;
         #endregion
 
@@ -65,7 +65,7 @@ namespace Maze
                 Input();
                 Update();
             }
-
+            Console.Clear();
             if (win)
                 Console.WriteLine("you won!");
             else if (lose)
@@ -97,6 +97,7 @@ namespace Maze
             }
 
             if (inputKey == ConsoleKey.H)
+                Console.Clear();
                 showGuide = !showGuide;
 
             if (inputKey == ConsoleKey.Q)
@@ -119,20 +120,26 @@ namespace Maze
 
             stringBuilder.Remove(playerY * (lengthY + 2) + playerX, 1);
             stringBuilder.Insert(playerY * (lengthY + 2) + playerX, '@');
+
             stringBuilder.Append($"you have {playerCoins} coin");
             if (playerCoins != 1)
                 stringBuilder.Append("s");
+            else
+                stringBuilder.Append(" ");
+
+            if (playerHasKey)
+                stringBuilder.Append($"\nyou have key");
+            else
+                stringBuilder.Append($"\n            ");
+
             stringBuilder.Append("\n");//вибачте але чомусь не можна зробити stringBuilder.Append($"you have {game.playerCoins} coin{game.playerCoins != 1? "s" : ""}\n");
             
             if (showGuide)
-            {
-                stringBuilder.Append($"press G to see guide");
-                stringBuilder.Append($"press H to hide this text and guide text");
-            }
+                stringBuilder.Append($"\"@\" is you.\n\"#\" is wall. you can't walk on walls ):\n\" \" is floor. you can walk on floor (:\n\"F\" is finish. when you on \"F\" it you win\n\"^\" is spike. when you step on it you lose\n\"C\" is coin collecting coins give you nothing but i guess it's cool\n\"K\" is key. you can have only 1 key\n\"D\" is door. you need key to open it. when you open it, it disappears\npress H to hide this text and guide text");
 
             stringToWrite = stringBuilder.ToString();
 
-            Console.Clear();
+            Console.SetCursorPosition(0, 0);
             Console.WriteLine(stringToWrite);
         }
 
@@ -195,6 +202,7 @@ namespace Maze
             if (wherePlayerWantToGo == TileType.LockedDoor && playerHasKey)
             {
                 tiles[playerY + dy, playerX + dx] = TileType.Floor;
+                playerHasKey = false;
             }
 
             playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
@@ -216,14 +224,6 @@ namespace Maze
                     playerHasKey = true;
                 }
             }
-        }
-
-        static void ReadMapFromFile(string fileName)
-        {
-            string strExeFilePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            string strWorkPath = Path.GetDirectoryName(strExeFilePath);
-            string mapFilePath = Path.Combine(strWorkPath, fileName);
-            StreamReader fileReader = new StreamReader(mapFilePath);
         }
     }
 }
