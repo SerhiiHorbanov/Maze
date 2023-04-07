@@ -5,13 +5,13 @@ namespace Maze
 {
     enum TileType
     {
-        Wall = 35,
-        Floor = 32,
-        Finish = 102,
-        Spike = 94,
-        Coin = 99,
-        Key = 107,
-        LockedDoor = 100
+        Wall = '#',
+        Floor = ' ',
+        Finish = 'F',
+        Spike = '^',
+        Coin = 'C',
+        Key = 'K',
+        LockedDoor = 'D'
     }
 
     enum Direction
@@ -20,6 +20,13 @@ namespace Maze
         Down,
         Left,
         Right,
+        None
+    }
+
+    enum GameEndResult
+    {
+        Win,
+        Lose,
         None
     }
 
@@ -46,11 +53,11 @@ namespace Maze
         private int playerY = 0;
         private int playerCoins;
         private bool playerHasKey = false;
-        private bool win = false;
-        private bool lose = false;
         private bool endedPlaying = false;
         private bool showGuide = true;
+        private GameEndResult gameEndResult = GameEndResult.None;
         private ConsoleKey inputKey = ConsoleKey.NoName;
+        Direction walkDirection = Direction.None;
         #endregion
 
         #region constants and readonlys
@@ -60,20 +67,21 @@ namespace Maze
 
         public void Start()
         {
-
-
             SetupConsole();
             TitleAnimation();
+
             while (!endedPlaying)
             {
                 Render();
                 Input();
                 Update();
             }
+
             Console.Clear();
-            if (win)
+
+            if (gameEndResult == GameEndResult.Win)
                 Console.WriteLine("you won!");
-            else if (lose)
+            else if (gameEndResult == GameEndResult.Lose)
                 Console.WriteLine("you lost...");
 
             Console.WriteLine("press any button to close the game");
@@ -82,11 +90,8 @@ namespace Maze
         private void Input()
         {
             inputKey = Console.ReadKey(true).Key;
-        }
 
-        private void Update()
-        {
-            Direction walkDirection = inputKey switch//ЦЕ В ІНПУТ
+            walkDirection = inputKey switch
             {
                 ConsoleKey.W => Direction.Up,
                 ConsoleKey.S => Direction.Down,
@@ -94,10 +99,14 @@ namespace Maze
                 ConsoleKey.D => Direction.Right,
                 _ => Direction.None
             };
+        }
+
+        private void Update()
+        {
 
             if (walkDirection != Direction.None)
             {
-                PlayerGo(walkDirection);
+                PlayerTryGo(walkDirection);
                 return;
             }
 
@@ -113,6 +122,19 @@ namespace Maze
         {
             StringBuilder stringBuilder = new StringBuilder();
             string stringToWrite;
+
+            RenderMap(stringBuilder);
+
+            RenderInfoUI(stringBuilder);
+
+            stringToWrite = stringBuilder.ToString();
+
+            Console.SetCursorPosition(0, 0);
+            Console.WriteLine(stringToWrite);
+        }
+
+        private void RenderMap(StringBuilder stringBuilder)
+        {
             for (int y = 0; y < tiles.GetLength(0); y++)
             {
                 for (int x = 0; x < tiles.GetLength(1); x++)
@@ -125,7 +147,10 @@ namespace Maze
 
             stringBuilder.Remove(playerY * (tiles.GetLength(0) + 2) + playerX, 1);
             stringBuilder.Insert(playerY * (tiles.GetLength(0) + 2) + playerX, '@');
+        }
 
+        private void RenderInfoUI(StringBuilder stringBuilder)
+        {
             stringBuilder.Append($"you have {playerCoins} coin");
             if (playerCoins != 1)
                 stringBuilder.Append("s");
@@ -141,11 +166,6 @@ namespace Maze
 
             if (showGuide)
                 stringBuilder.Append($"\"@\" is you.\n\"#\" is wall. you can't walk on walls ):\n\" \" is floor. you can walk on floor (:\n\"F\" is finish. when you on \"F\" it you win\n\"^\" is spike. when you step on it you lose\n\"C\" is coin collecting coins give you nothing but i guess it's cool\n\"K\" is key. you can have only 1 key\n\"D\" is door. you need key to open it. when you open it, it disappears\npress H to hide this text and guide text");
-
-            stringToWrite = stringBuilder.ToString();
-
-            Console.SetCursorPosition(0, 0);
-            Console.WriteLine(stringToWrite);
         }
 
         private void SetupConsole()
@@ -170,11 +190,11 @@ namespace Maze
             {
                 case Direction.Up:
                     if (playerY != 0)
-                        return (1, 0);
+                        return (-1, 0);
                     break;
                 case Direction.Down:
                     if (playerY != tiles.GetLength(0) - 1)
-                        return (-1, 0);
+                        return (1, 0);
                     break;
                 case Direction.Left:
                     if (playerX != 0)
@@ -187,51 +207,52 @@ namespace Maze
             }
             return (0, 0);
         }
-        private void PlayerGo(Direction direction)//ЗМЕНШИ МЕТОД
+        private void PlayerTryGo(Direction direction)
         {
-            (int Y, int X) delta = DirectionToDelta(direction);
-            int dy = delta.Y;
-            int dx = delta.X;
+            (int dy, int dx) = DirectionToDelta(direction);
 
+            TileType wherePlayerWantsToGo = tiles[playerY + dy, playerX + dx];
 
-            TileType wherePlayerWantToGo = tiles[playerY + dy, playerX + dx];
-
-            switch (wherePlayerWantToGo)
+            switch (wherePlayerWantsToGo)
             {
                 case TileType.Finish:
-                    win = true;
+                    gameEndResult = GameEndResult.Win;
                     endedPlaying = true;
                     return;
                 case TileType.Spike:
-                    lose = true;
+                    gameEndResult = GameEndResult.Lose;
                     endedPlaying = true;
                     return;
             }
 
-            if (wherePlayerWantToGo == TileType.LockedDoor && playerHasKey)
+            if (wherePlayerWantsToGo == TileType.LockedDoor && playerHasKey)
             {
                 tiles[playerY + dy, playerX + dx] = TileType.Floor;
                 playerHasKey = false;
             }
 
-            bool playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
+            bool playerCanGo = wherePlayerWantsToGo == TileType.Floor || wherePlayerWantsToGo == TileType.Coin || (wherePlayerWantsToGo == TileType.Key && !playerHasKey);
 
-            if (playerCanGoThere)
+            if (playerCanGo)
+                PlayerGo(dx, dy);
+        }
+
+        void PlayerGo(int dx, int dy)
+        {
+            playerX += dx;
+            playerY += dy;
+            TileType wherePlayerWantsToGo = tiles[playerY + dy, playerX + dx];
+
+            if (wherePlayerWantsToGo == TileType.Coin)
             {
-                playerX += dx;
-                playerY += dy;
+                tiles[playerY, playerX] = TileType.Floor;
+                playerCoins++;
+            }
 
-                if (wherePlayerWantToGo == TileType.Coin)
-                {
-                    tiles[playerY, playerX] = TileType.Floor;
-                    playerCoins++;
-                }
-
-                if (wherePlayerWantToGo == TileType.Key)
-                {
-                    tiles[playerY, playerX] = TileType.Floor;
-                    playerHasKey = true;
-                }
+            if (wherePlayerWantsToGo == TileType.Key)
+            {
+                tiles[playerY, playerX] = TileType.Floor;
+                playerHasKey = true;
             }
         }
     }
