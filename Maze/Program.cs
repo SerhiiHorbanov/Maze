@@ -239,9 +239,9 @@ namespace Maze
 
         void PlayerGo(int dx, int dy)
         {
+            TileType wherePlayerWantsToGo = tiles[playerY + dy, playerX + dx];
             playerX += dx;
             playerY += dy;
-            TileType wherePlayerWantsToGo = tiles[playerY + dy, playerX + dx];
 
             if (wherePlayerWantsToGo == TileType.Coin)
             {
