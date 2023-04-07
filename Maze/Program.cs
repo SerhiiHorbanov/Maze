@@ -86,7 +86,7 @@ namespace Maze
 
         private void Update()
         {
-            Direction walkDirection = inputKey switch
+            Direction walkDirection = inputKey switch//ЦЕ В ІНПУТ
             {
                 ConsoleKey.W => Direction.Up,
                 ConsoleKey.S => Direction.Down,
@@ -97,7 +97,7 @@ namespace Maze
 
             if (walkDirection != Direction.None)
             {
-                playerGo(walkDirection);
+                PlayerGo(walkDirection);
                 return;
             }
 
@@ -164,34 +164,37 @@ namespace Maze
             }
         }
 
-        private void playerGo(Direction direction)
+        private (int, int) DirectionToDelta(Direction direction)
         {
-            short dx = 0;
-            short dy = 0;
-            TileType wherePlayerWantToGo;
-            bool playerCanGoThere;
-
             switch (direction)
             {
                 case Direction.Up:
                     if (playerY != 0)
-                        dy = -1;
+                        return (1, 0);
                     break;
                 case Direction.Down:
                     if (playerY != tiles.GetLength(0) - 1)
-                        dy = 1;
+                        return (-1, 0);
                     break;
                 case Direction.Left:
                     if (playerX != 0)
-                        dx = -1;
+                        return (0, -1);
                     break;
                 case Direction.Right:
                     if (playerX != tiles.GetLength(1) - 1)
-                        dx = 1;
+                        return (0, 1);
                     break;
             }
+            return (0, 0);
+        }
+        private void PlayerGo(Direction direction)//ЗМЕНШИ МЕТОД
+        {
+            (int Y, int X) delta = DirectionToDelta(direction);
+            int dy = delta.Y;
+            int dx = delta.X;
 
-            wherePlayerWantToGo = tiles[playerY + dy, playerX + dx];
+
+            TileType wherePlayerWantToGo = tiles[playerY + dy, playerX + dx];
 
             switch (wherePlayerWantToGo)
             {
@@ -211,7 +214,7 @@ namespace Maze
                 playerHasKey = false;
             }
 
-            playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
+            bool playerCanGoThere = wherePlayerWantToGo == TileType.Floor || wherePlayerWantToGo == TileType.Coin || (wherePlayerWantToGo == TileType.Key && !playerHasKey);
 
             if (playerCanGoThere)
             {
