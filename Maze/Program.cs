@@ -121,16 +121,13 @@ namespace Maze
         private void Render()
         {
             StringBuilder stringBuilder = new StringBuilder();
-            string stringToWrite;
 
             RenderMap(stringBuilder);
 
             RenderInfoUI(stringBuilder);
 
-            stringToWrite = stringBuilder.ToString();
-
             Console.SetCursorPosition(0, 0);
-            Console.WriteLine(stringToWrite);
+            Console.WriteLine(stringBuilder.ToString());
         }
 
         private void RenderMap(StringBuilder stringBuilder)
@@ -145,8 +142,7 @@ namespace Maze
                 stringBuilder.Append('\n');
             }
 
-            stringBuilder.Remove(playerY * (tiles.GetLength(0) + 2) + playerX, 1);
-            stringBuilder.Insert(playerY * (tiles.GetLength(0) + 2) + playerX, '@');
+            stringBuilder[playerY * (tiles.GetLength(0) + 2) + playerX] = '@';
         }
 
         private void RenderInfoUI(StringBuilder stringBuilder)
